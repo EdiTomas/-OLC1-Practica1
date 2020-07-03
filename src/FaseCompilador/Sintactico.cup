@@ -1,0 +1,275 @@
+package FaseCompilador;
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import ArchivoDeReportes.Imprimir;
+import ArchivoDeReportes.Contar;
+import ArchivoDeReportes.ContarSi;
+import ArchivoDeReportes.Graficar;
+import ArchivoDeReportes.LeerArchivo;
+import ArchivoDeReportes.ObtenerSi;
+import ArchivoDeReportes.Promedio;
+import ArchivoDeReportes.Sumar;
+import AnalizadorInterno.Variable;
+import ArchivoDeReportes.ID;
+parser code
+{:
+      public static ArrayList<ErrorParser> ErrorSintactico = new ArrayList();
+      public static ArrayList<ErrorSemantico> listaErrorSemantico = new ArrayList();
+      public static ArrayList<Imprimir> print = new ArrayList();
+      public static ArrayList<Graficar> grafico = new ArrayList();   
+      public static ArrayList<Variable> globales = new ArrayList(); 
+/************-----------------Metodo al que se llama automáticamente ante algún error sintactico.--------------------*/
+            
+     public void syntax_error(Symbol s)
+    {
+          try{
+                    System.err.println("Error Sintactico En la linea" + (s.left+1) +" Columna "+(s.right+1)+ ". Identificador "
+                    +  s.value.toString()   + " no reconocido1." );
+                    int columna = s.right;
+                    int fila = s.left;
+                    String lexema = s.value.toString();
+                    ErrorParser datos = new ErrorParser("Error Sintactico",lexema,fila, columna,"Se esperaba caracter");
+                    ErrorSintactico.add(datos);
+             }
+                    catch(Exception error){}
+    }
+
+/**----------------Metodo al que se llama en el momento en que ya no es posible una recuperación de errores.---------------------*/
+public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception
+    {
+                try{
+                     
+                    System.err.println("Error Sintactico En la linea" + (s.left+1) +" Columna "+(s.right+1)+ ". Identificador "
+                    +  s.value.toString()   + " no reconocido1." );
+                     int columna = s.right;
+                     int fila = s.left;
+                     String lexema = s.value.toString();
+                     ErrorParser datos = new ErrorParser("Error Sintactico",lexema,fila, columna,"Se esperaba caracter");
+                     ErrorSintactico.add(datos);
+                    } catch(Exception er){}
+   }
+
+
+:}
+
+//--------- Se declaran los todos terminales reservados de jflex------------------------------------------------------
+
+terminal String entero, decimal;
+terminal String id;
+terminal String texto;
+terminal String puntoycoma,coma;
+terminal String mas,menos; 
+terminal String menor,mayor,equals,eqa,diferente,menorigual,mayorigual;
+terminal String pa_open,pa_close; 
+
+//----------- palabra reservadas- jflex----------
+
+terminal String archivo;
+terminal String leerarchivo;
+terminal String numero;
+terminal String suma;   
+terminal String contar;   
+terminal String promedio;   
+terminal String contarsi;   
+terminal String cadena;
+terminal String obtenersi;
+terminal String imprimir;
+terminal String graficar;
+
+//********************************************************* Aquí están los no terminales *************************************
+non terminal INICIO;
+non terminal ARCHIVOREPORTES;
+
+//-----------------------------------------
+non terminal Variable DECLARACIONVARIABLES;
+non terminal TIPO,FUNCION;
+non terminal  OPERADORRACIONAL;
+non terminal Imprimir IMPRIMIR; 
+non terminal ArrayList<Object> LISTAEXPRESIONES;
+non terminal VALOR;
+non terminal Graficar GRAFICAR;
+non terminal SIGNO;
+
+
+//-------------------------------Formato BNF----------------------------------------------------------------
+start with INICIO; // start with sirve para indicarle al parser con que produccion empezar
+
+INICIO ::= ARCHIVOREPORTES ;
+
+ARCHIVOREPORTES ::=  ARCHIVOREPORTES DECLARACIONVARIABLES:a 
+                       {:
+                           globales.add(a);
+                       :}
+                    | DECLARACIONVARIABLES:a
+                      {:
+                           globales.add(a);
+                      :}
+                    | ARCHIVOREPORTES IMPRIMIR:a
+                       {:
+                            print.add(a);
+                      :} 
+                    | IMPRIMIR:a
+                       {:
+                          print.add(a);
+                      :} 
+                    | ARCHIVOREPORTES GRAFICAR:a
+                      {:
+                         grafico.add(a);
+                      :}
+                    | GRAFICAR:a
+                      {:
+                          grafico.add(a);   
+                      :}
+                   ;
+DECLARACIONVARIABLES ::= TIPO:tipo id:a eqa FUNCION:f puntoycoma
+                         {:
+                            if (tipo.toString().equalsIgnoreCase("Archivo") && f instanceof LeerArchivo) {
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+                    } else if (tipo.toString().equalsIgnoreCase("Numerico") && f instanceof Sumar) {
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+
+                    } else if (tipo.toString().equalsIgnoreCase("Numerico") && f instanceof Contar) {
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+
+                    } else if (tipo.toString().equalsIgnoreCase("Numerico") && f instanceof Promedio) {
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+
+                    } else if (tipo.toString().equalsIgnoreCase("Numerico") && f instanceof ContarSi) {
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+
+                    } else if (tipo.toString().equalsIgnoreCase("Cadena") && f instanceof ObtenerSi) {
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+                    } else {
+                        // error semantico
+                        RESULT = new Variable(tipo.toString(), a, f, fright + 1, fleft + 1);
+                }
+                         :}
+;
+TIPO ::=  archivo:val
+            {:
+              RESULT =val;  
+            :} 
+         | numero:val
+            {:
+               RESULT =val;
+            :}
+         | cadena:val
+           {:
+                RESULT =val;
+           :}
+;   
+FUNCION ::=   leerarchivo  pa_open texto:val pa_close
+               {:
+                   // String ruta = "\""+ val + "\"";             
+                 // LeerArchivo nuevoarchivo 
+                  RESULT  =  new LeerArchivo(val,valright+1,valleft+1);       
+                    
+               :}  
+             | suma       pa_open id:id coma texto:texto pa_close
+                {:
+                    RESULT = new Sumar(id,texto,idright+1,idleft+1);
+                :}
+             | contar     pa_open id:id pa_close
+               {:
+                    RESULT = new Contar(id,idright+1,idleft+1); 
+               :} 
+             | promedio   pa_open id:id coma texto:texto pa_close
+               {:
+                     RESULT = new Promedio(id,texto,idright+1,idleft+1); 
+               :} 
+             | contarsi   pa_open id:id coma texto:texto coma OPERADORRACIONAL:signo coma VALOR:valor pa_close
+               {:
+                     RESULT = new  ContarSi(id,texto,(String)signo,valor,valorright+1,valorleft+1);   
+               :} 
+             | obtenersi  pa_open id:id coma texto:texto coma OPERADORRACIONAL:signo coma VALOR:valor pa_close
+               {:
+                     RESULT = new  ObtenerSi(id,texto,(String)signo,valor,valorright+1,valorleft+1);
+               :}
+;
+OPERADORRACIONAL ::=   menor:a
+                        {:
+                           RESULT = a;
+                       :}
+                      |mayor:a
+                        {:
+                            RESULT = a;
+                        :} 
+                      |equals:a
+                        {:
+                             RESULT = a;
+                        :} 
+                      |diferente:a
+                        {:
+                            RESULT = a;
+                        :}
+                      |menorigual:a
+                       {:
+                           RESULT = a;
+                       :} 
+                      |mayorigual:a
+                       {:
+                          RESULT = a;
+                       :}
+                     ;
+
+
+GRAFICAR ::= graficar   pa_open texto:a coma texto:b coma id:id coma texto:c coma texto:d pa_close puntoycoma
+{:
+     RESULT = new Graficar(a,b,id,c,d);
+:}
+;
+IMPRIMIR ::= imprimir pa_open  LISTAEXPRESIONES:listaExpresiones pa_close puntoycoma
+{:
+            RESULT =  new Imprimir(listaExpresiones);      
+:}
+;
+
+LISTAEXPRESIONES ::= LISTAEXPRESIONES:a  coma VALOR:b
+                          {:
+                                 RESULT = a;
+                                 RESULT.add(b);
+                          :}
+                      |  VALOR:a  
+                         {:
+                            RESULT = new ArrayList();
+                            RESULT.add(a);
+                         :} 
+;
+VALOR ::=   texto:val
+               {:
+                  RESULT = val.toString();
+               :}  
+              |SIGNO:a entero:val
+               {:
+                RESULT = Double.parseDouble(a.toString()+""+val.toString());
+               :} 
+              |SIGNO:a decimal:val
+               {:
+                 RESULT = Double.parseDouble(a.toString()+""+val.toString());
+               :}   
+              |entero:entero
+               {:
+                 RESULT = Double.parseDouble(entero.toString());
+               :}
+              |decimal:decimal
+                {:
+                  RESULT = Double.parseDouble(decimal.toString());
+                :}
+              | id:id
+                {:
+                   RESULT = new ID(id,idright+1,idleft+1);
+                :}    
+; 
+SIGNO ::=  menos:menos
+            {:
+               RESULT = menos;
+            :} 
+         | mas:mas
+            {:
+                RESULT = mas;
+            :}
+;
+
+
+
+

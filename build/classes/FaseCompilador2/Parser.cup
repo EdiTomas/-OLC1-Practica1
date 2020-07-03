@@ -1,0 +1,168 @@
+package FaseCompilador2;
+import FaseCompilador.ErrorParser;
+import FaseCompilador.Sintactico;
+import FaseCompilador.ErrorSemantico;
+
+import java_cup.runtime.Symbol;
+import java.util.ArrayList;
+import Datos.Registro;
+import Datos.ArchivoDatos;
+parser code
+{:
+  public ArchivoDatos  archivo ;
+
+/************-----------------Metodo al que se llama automáticamente ante algún error sintactico.--------------------*/
+            
+     public void syntax_error(Symbol s)
+    {
+     try{
+                    System.err.println("Error Sintactico En la linea" + (s.left+1) +" Columna "+(s.right+1)+ ". Identificador "
+                    +  s.value.toString()   + " no reconocido1." );
+                    int columna = s.right;
+                    int fila = s.left;
+                    String lexema = s.value.toString();
+                    ErrorParser datos = new ErrorParser("Error Sintactico",lexema,fila, columna,"Se esperaba caracter");
+                   Sintactico.ErrorSintactico.add(datos);
+             }
+                    catch(Exception error){}
+    
+}
+
+/**----------------Metodo al que se llama en el momento en que ya no es posible una recuperación de errores.---------------------*/
+public void unrecovered_syntax_error(Symbol s) throws java.lang.Exception
+    {
+                try{
+                     
+                    System.err.println("Error Sintactico En la linea" + (s.left+1) +" Columna "+(s.right+1)+ ". Identificador "
+                    +  s.value.toString()   + " no reconocido1." );
+                     int columna = s.right;
+                     int fila = s.left;
+                     String lexema = s.value.toString();
+                     ErrorParser datos = new ErrorParser("Error Sintactico",lexema,fila, columna,"Se esperaba caracter");
+                    Sintactico.ErrorSintactico.add(datos);
+                    } catch(Exception er){}
+
+   }
+
+
+:}
+
+//--------- Se declaran los todos terminales reservados de jflex------------------------------------------------------
+
+terminal String entero, decimal;
+terminal String txt;
+terminal String coma;
+terminal String mas,menos;
+terminal String eqa;
+terminal String llaveabierta,llavecerrada,CorcheteAbierto,CorcheteCerrado;
+
+//----------- palabra reservadas- jflex----------
+
+terminal String clave;
+terminal String registro;
+
+//********************************************************* Aquí están los no terminales *************************************
+
+non terminal INICIO;
+non terminal ArchivoDatos ARCHIVODATOS;
+non terminal CLAVE,REGISTRO;
+non terminal ArrayList<String> LISTASTRING;
+non terminal LISTATIPO;
+non terminal ArrayList<Registro> LIST ;    
+non terminal ArrayList<ArrayList<Registro>>  LISTADO;
+non terminal SIGNO;
+
+//-------------------------------Formato BNF----------------------------------------------------------------
+start with INICIO; // start with sirve para indicarle al parser con que produccion empezar
+
+INICIO ::=  ARCHIVODATOS:a
+{:
+      parser.archivo = a;   
+:}
+;
+
+ARCHIVODATOS ::= CLAVE:a  REGISTRO:b 
+                 {:
+                      RESULT = new ArchivoDatos((ArrayList<String>)a,(ArrayList<ArrayList<Registro>>)b);
+                 :}
+                ;
+CLAVE ::=  clave eqa CorcheteAbierto LISTASTRING:cabecera CorcheteCerrado
+                  {:
+                       RESULT = cabecera;
+                  :}          
+;  
+LISTASTRING ::= LISTASTRING:l coma txt:a
+                  {:
+                      RESULT = l;
+                      RESULT.add(a);
+                  :}
+                | txt:a
+                  {:
+                       RESULT = new ArrayList();
+                       RESULT.add(a);    
+                  :}
+               ;
+REGISTRO ::=   registro eqa CorcheteAbierto LISTADO:r CorcheteCerrado
+                {:
+                    RESULT =r;      
+                :}
+             ;
+LISTADO ::=   LISTADO:a llaveabierta LIST:lista llavecerrada
+              {:     
+                       RESULT = a;
+                       RESULT.add(lista);
+              :}    
+              | llaveabierta LIST:lista llavecerrada
+               {:
+                       RESULT = new ArrayList();
+                      RESULT.add(lista);            
+               :}   
+             ;
+
+LIST  ::=  LIST:a coma LISTATIPO:b
+              {:
+                RESULT = a;
+                RESULT.add(new Registro(b,bright+1,bleft+1));             
+              :}
+           | LISTATIPO:b
+              {:
+                   RESULT = new ArrayList();
+                   RESULT.add(new Registro(b,bright+1,bleft+1));             
+              :}
+;
+
+
+LISTATIPO ::=   txt:val
+                {:
+                        RESULT = val;
+                :}
+              |SIGNO:a entero:val
+                {:
+                        RESULT = Double.parseDouble(a.toString()+""+val.toString());
+                :}
+              |SIGNO:a decimal:val
+                {:
+                        RESULT = Double.parseDouble(a.toString()+""+val.toString());
+                :} 
+              |entero:val
+                {:
+                       RESULT = Double.parseDouble(val.toString());  
+                :}
+              |decimal:val
+               {:
+                        RESULT = Double.parseDouble(val.toString());
+               :}                           
+     ;
+SIGNO ::=  menos:a
+              {:
+                RESULT = a;    
+              :}
+         | mas:a
+           {:
+              RESULT = a;    
+           :}
+;
+
+
+
+
